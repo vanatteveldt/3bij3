@@ -1,5 +1,5 @@
 from flask import render_template, flash, redirect, url_for, request, make_response, session, Markup
-from app import app, db, mail
+from app import app, db, mail, recommender
 from flask_login import current_user, login_user, logout_user, login_required
 from app.models import User, News, News_sel, Category, Points_logins, Points_stories, Points_invites, Points_ratings, User_invite, Num_recommended, Show_again, Diversity
 from werkzeug.urls import url_parse
@@ -17,7 +17,7 @@ from app.processing import paragraph_processing
 from werkzeug.security import generate_password_hash
 from app.vars import host, indexName, es, list_of_sources, topics, doctype_dict, topic_list
 from app.vars import num_less, num_more, num_select, num_recommender
-from app.vars import topicfield, textfield, teaserfield, teaseralt, doctypefield, classifier_dict
+from app.vars import topicfield, textfield, teaserfield, teaseralt, titlefield, doctypefield, classifier_dict
 from app.vars import group_number
 from app.vars import p1_day_min, p1_points_min, p2_day_min, p2_points_min
 import webbrowser
@@ -34,9 +34,6 @@ def login():
         user = User.query.filter_by(username = form.username.data).first()
         if user is None or not user.check_password(form.password.data):
             flash('Ongeldige gebruikersnaam of wachtwoord')
-            return redirect(url_for('login'))
-        elif user.activated != 1:
-            flash('Je moet jouw account nog steeds  activeren, controleer hiervoor jouw email (ook jouw ongewenste e-mails of spam)')
             return redirect(url_for('login'))
         login_user(user, remember=form.remember_me.data)
         try:
@@ -167,15 +164,15 @@ def newspage(show_again = 'False'):
         db.session.add(news_displayed)
         db.session.commit()
         result["new_id"] = news_displayed.id
-        text_clean = re.sub(r'\|','', result["_source"][textfield])
+        text_clean = re.sub(r'\|','', result["_source"][titlefield])
         if text_clean.startswith(('artikel ', 'live ')):
             text_clean = text_clean.split(' ', 1)[1]
         elif re.match('[A-Z]*? - ', text_clean):
             text_clean = re.sub('[A-Z]*? - ', '', text_clean)
         try:
             teaser = result["_source"][teaserfield]
-        except:
-            teaser = result["_source"][teaseralt]
+        except KeyError:
+            teaser = result["_source"][textfield]
         teaser = re.sub('[A-Z]*? - ', '', teaser)
         result["_source"]["teaser"] = teaser
         result["_source"]["text_clean"] = text_clean
@@ -218,28 +215,32 @@ def newspage(show_again = 'False'):
     return render_template('newspage.html', results = results)
 
 def which_recommender():
-    group = current_user.group
-    if group == 1:
-        method = rec.random_selection()
-    elif group == 2:
-        selected_news = number_read()['selected_news']
-        if selected_news < 3:
-            method = rec.random_selection()
-        else:
-            method = rec.past_behavior()
-    elif group == 3:
-        selected_news = number_read()['selected_news']
-        if selected_news == 0:
-            method = rec.random_selection()
-        else:
-            method = rec.past_behavior_topic()
-    elif group == 4:
-        categories = Category.query.filter_by(user_id = current_user.id).order_by(desc(Category.id)).first()
-        if categories == None:
-            method  = rec.random_selection()
-        else:
-            method = rec.category_selection_classifier()
-    return(method)
+	group = current_user.group
+	method = rec.random_selection()
+	return(method)
+    
+#    group = current_user.group
+ #   if group == 1:
+  #      method = rec.random_selection()
+   # elif group == 2:
+    #    selected_news = number_read()['selected_news']
+     #   if selected_news < 3:
+      #      method = rec.random_selection()
+       # else:
+        #    method = rec.past_behavior()
+#    elif group == 3:
+ #       selected_news = number_read()['selected_news']
+  #      if selected_news == 0:
+   #         method = rec.random_selection()
+    #    else:
+     #       method = rec.past_behavior_topic()
+#    elif group == 4:
+ #       categories = Category.query.filter_by(user_id = current_user.id).order_by(desc(Category.id)).first()
+  #      if categories == None:
+   #         method  = rec.random_selection()
+    #    else:
+     #       method = rec.category_selection_classifier()
+#    return(method)
 
 
 def last_seen():
@@ -353,13 +354,13 @@ def show_detail(id):
              text = [text]
          text = paragraph.join_text(text)
          try:
-             teaser = item['_source'][rec.teaserfield]
+             teaser = item['_source'][teaserfield]
          except KeyError:
-            teaser = item['_source'][rec.teaseralt]
+            teaser = item['_source'][textfield][:50]
             teaser = re.sub(r'<.*?>',' ', teaser)
          title = item['_source']['title']
          url = item['_source']['url']
-         publication_date = item['_source']['publication_date']
+         publication_date = item['_source']['date']
          publication_date = datetime.strptime(publication_date, '%Y-%m-%dT%H:%M:%S')
          try:
              for image in item['_source']['images']:
@@ -367,7 +368,10 @@ def show_detail(id):
          except KeyError:
              image_url = []
              image_caption = []
-         source = doctype_dict[item['_source']['doctype']]
+         try:
+             source = item['_source']['publisher']
+         except KeyError:
+             source = "onbekende bron"
      form = rating()
      if request.method == 'POST' and form.validate():
          selected.starttime = session.pop('start_time', None)

@@ -12,11 +12,11 @@ teaseralt is the elasticsearch field where an alternative teaser can be found (e
 doctypefield is the elasticsearch field where the document type is stored
 classifier_dict is the dictionary that has the results of a prediction with the topic classifier as key and the topic or topics (as list) as value
 '''
-topicfield = "topic"
+topicfield = "title"
 textfield = "text"
 teaserfield = "teaser"
-teaseralt = "teaser_rss"
-doctypefield = "doctype"
+teaseralt = "title"
+doctypefield = "publisher"
 titlefield = "title"
 '''
 ELASTICSEARCH SETUP (examples given are from INCA database)
@@ -47,7 +47,7 @@ group_number is how many different groups (i.e. recommenders) do you have?
 num_less = 20
 num_more = 200
 num_select = 9
-num_recommender = 6
+num_recommender = 1
 group_number = 4
 
 '''

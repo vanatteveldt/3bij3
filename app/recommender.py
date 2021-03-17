@@ -1,4 +1,4 @@
-from app import dictionary, index, article_ids, db, mysql_user, mysql_password, mysql_database
+from app import dictionary, index, article_ids, db
 from flask_login import current_user
 from app.models import User, News, News_sel, Category
 import random
@@ -10,15 +10,6 @@ from app.vars import host, indexName, es, list_of_sources
 from app.vars import num_less, num_more, num_select, num_recommender
 from app.vars import topicfield, textfield, teaserfield, teaseralt, titlefield
 from app.vars import doctypefield, classifier_dict, all_categories
-import mysql.connector
-
-connection = mysql.connector.connect(
-    host = 'localhost',
-    user = mysql_user,
-    passwd= mysql_password,
-    database = mysql_database
-    )
-cursor = connection.cursor(prepared = True)
 
 class recommender():
 
@@ -45,6 +36,13 @@ class recommender():
                 body={"query":{"terms":{"_id":[item]}}}).get('hits',{}).get('hits',[""])
             for d in doc:
                 docs.append(d)
+        return docs
+
+    def recent_articles(self, by_field = "META.ADDED", num = None):
+        body = dict(size=100,
+                    sort=[{"date": {"order": "desc"}}],
+		)
+        docs = es.search(index="inca", body=body)['hits']['hits']
         return docs
 
     def doctype_last(self, doctype, by_field = "META.ADDED", num = None):
@@ -89,7 +87,7 @@ class recommender():
 
     def random_selection(self):
         '''Selects a random sample of the last articles'''
-        articles = [self.doctype_last(s) for s in list_of_sources]
+        articles = [self.recent_articles(s) for s in list_of_sources]
         all_articles = [a for b in articles for a in b]
         try:
             random_sample = random.sample(all_articles, self.num_select)

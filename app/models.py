@@ -32,7 +32,7 @@ class User(UserMixin, db.Model):
     phase_completed = db.Column(db.Integer, default = 1)
     fake = db.Column(db.Integer, default = 0)
     panel_id = db.Column(db.String(128), default = "noIDyet")
-    activated = db.Column(db.Integer, default = 0)
+    activated = db.Column(db.Integer, default = 1)
     reminder_sent = db.Column(db.Integer, default = 0)
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
