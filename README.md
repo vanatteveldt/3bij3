@@ -1,6 +1,6 @@
 # 3bij3 - A framework for testing recommender systems and their effects 
 
-# How to use it (locally)
+## Installation
 
 1. Clone the repository
 
@@ -24,6 +24,14 @@ pip install -r requirements.txt
 
 4. Set up an elasticsearch database with news articles (Infos on how to install this are [here](https://github.com/uvacw/inca/blob/development/doc/gettingstarted.md) under point 3)
 
+```
+docker run --name elastic -dp 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e 'ES_JAVA_OPTS=-Xms800m -Xmx800m'  docker.elastic.co/elasticsearch/elasticsearch:7.11.1
+```
+
+`#TODO: create a small script to insert example data`
+
+(depending on you settings, you might need to run the first command as administrator, e.g. `sudo docker ...`)
+
 5. Initialise the database with the following commands:
 
 ```python3
@@ -32,7 +40,12 @@ flask db migrate
 flask db upgrade
 ```
 
-6. Turn it on
+`#TODO: Create user`
+
+## Usage
+
+Run a local server with:
+
 ```
 FLASK_APP=3bij3.py flask run
 ```
